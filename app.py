@@ -779,7 +779,7 @@ st.markdown(
 
 st.header("1️⃣ Select MDC Type")
 
-mdc_type = st.selectbox("MDC Type", ["Singly Rack MDC", "Multi Rack MDC"])
+mdc_type = st.selectbox("MDC Type", ["Single Rack MDC", "Multi Rack MDC"])
 
 
 
@@ -1262,43 +1262,61 @@ else:
 
 
 # ============================================================
-# ADD STANDARD COMPONENTS
+# ADD STANDARD COMPONENTS TO BOM
 # ============================================================
 
-for component_name, specification_key, fixed_quantity in standard_bom:
+# Select the correct Part Number master
+if mdc_type == "Single Rack MDC":
 
-    specification = specifications.get(
-        specification_key,
-        "XXX"
+    active_standard_part_numbers = (
+        SINGLE_STANDARD_PART_NUMBERS
     )
 
-    if fixed_quantity is None:
-        try:
-            quantity = int(float(specification))
-        except (ValueError, TypeError):
-            quantity = 1
-    else:
-        quantity = fixed_quantity
+    active_optional_part_numbers = (
+        SINGLE_OPTIONAL_PART_NUMBERS
+    )
+
+else:
+
+    active_standard_part_numbers = (
+        MULTI_STANDARD_PART_NUMBERS
+    )
+
+    active_optional_part_numbers = (
+        MULTI_OPTIONAL_PART_NUMBERS
+    )
+
+
+# ------------------------------------------------------------
+# ADD EVERY STANDARD COMPONENT
+# ------------------------------------------------------------
+
+for item in standard_bom:
+
+    component_name = item["Component"]
+
+    # Get Part Number from the appropriate master
+    part_number = active_standard_part_numbers.get(
+        component_name,
+        "XXX"
+    )
 
     bom_rows.append({
 
         "Category":
-            "Standard",
+            item["Category"],
 
         "Part Number":
-            standard_part_numbers.get(
-                component_name,
-                "XXX"
-            ),
+            part_number,
 
         "Component":
             component_name,
 
         "Specification":
-            specification,
+            item["Specification"],
 
         "Quantity":
-            quantity,
+            item["Quantity"],
 
         "Unit Price":
             "",
@@ -1310,10 +1328,19 @@ for component_name, specification_key, fixed_quantity in standard_bom:
 
 
 # ============================================================
-# ADD SELECTED OPTIONAL COMPONENTS
+# ADD SELECTED OPTIONAL COMPONENTS TO BOM
 # ============================================================
 
 for item in selected_optional_items:
+
+    component_key = item["component_key"]
+
+    component_name = item["component"]
+
+    part_number = active_optional_part_numbers.get(
+        component_key,
+        "XXX"
+    )
 
     bom_rows.append({
 
@@ -1321,13 +1348,10 @@ for item in selected_optional_items:
             "Optional",
 
         "Part Number":
-            optional_part_numbers.get(
-                item["component_key"],
-                "XXX"
-            ),
+            part_number,
 
         "Component":
-            item["component"],
+            component_name,
 
         "Specification":
             "Selected by User",
@@ -1336,18 +1360,26 @@ for item in selected_optional_items:
             item["quantity"],
 
         "Unit Price":
-            format_price(item["unit_price"]),
+            format_price(
+                item["unit_price"]
+            ),
 
         "Amount":
-            format_price(item["amount"])
-            if item["amount"] is not None
-            else "XXX"
+            (
+                format_price(
+                    item["amount"]
+                )
+                if is_numeric_price(
+                    item["unit_price"]
+                )
+                else "XXX"
+            )
 
     })
 
 
 # ============================================================
-# CREATE AND DISPLAY BOM
+# CREATE FINAL BOM DATAFRAME
 # ============================================================
 
 bom_df = pd.DataFrame(
@@ -1363,12 +1395,16 @@ bom_df = pd.DataFrame(
     ]
 )
 
+
+# ============================================================
+# DISPLAY FINAL BOM
+# ============================================================
+
 st.dataframe(
     bom_df,
     use_container_width=True,
     hide_index=True
 )
-
 
 # ============================================================
 # STEP 7 — COMMERCIAL SUMMARY
