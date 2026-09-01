@@ -39,7 +39,7 @@ st.set_page_config(
 
 SINGLE_STANDARD_PART_NUMBERS = {
 
-    "Rack": "XXX",
+    "Rack": "721",
     "Cooling System": "XXX",
     "Environment Monitoring": "XXX",
     "Front Access Control": "XXX",
