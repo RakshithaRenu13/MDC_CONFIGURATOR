@@ -13,7 +13,60 @@ st.set_page_config(
     page_icon="🏭",
     layout="wide"
 )
+# ============================================================
+# CURRENCY FUNCTIONS
+# ============================================================
 
+@st.cache_data(ttl=3600)
+def get_live_exchange_rate(from_currency, to_currency):
+
+    if from_currency == to_currency:
+        return 1.0
+
+    try:
+
+        url = (
+            f"https://api.frankfurter.dev/v2/rate/"
+            f"{from_currency}/{to_currency}"
+        )
+
+        response = requests.get(
+            url,
+            timeout=10
+        )
+
+        response.raise_for_status()
+
+        data = response.json()
+
+        return float(data["rate"])
+
+    except Exception as e:
+
+        st.warning(
+            f"Unable to fetch live exchange rate: {e}"
+        )
+
+        return None
+
+
+def convert_currency(amount, rate):
+
+    if amount is None:
+        return None
+
+    return float(amount) * float(rate)
+
+
+def currency_symbol(currency):
+
+    if currency == "INR":
+        return "₹"
+
+    if currency == "USD":
+        return "$"
+
+    return ""
 # ============================================================
 # CURRENCY SELECTION
 # ============================================================
