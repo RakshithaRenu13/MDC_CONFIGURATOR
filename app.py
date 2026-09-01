@@ -851,7 +851,7 @@ with price_col2:
 # STEP 3 — COMPLETE CONFIGURATION SPECIFICATIONS
 # ============================================================
 
-st.header("3️⃣ BOQ")
+st.header("3️⃣ Complete Configuration Specifications")
 
 specifications = config_data[selected_config]
 
