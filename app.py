@@ -165,7 +165,7 @@ st.divider()
 
 SINGLE_STANDARD_PART_NUMBERS = {
 
-    "Rack": "721",
+    "Rack": 721,
     "Cooling System": "XXX",
     "Environment Monitoring": "XXX",
     "Front Access Control": "XXX",
