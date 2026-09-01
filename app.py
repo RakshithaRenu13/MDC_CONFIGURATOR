@@ -1268,34 +1268,46 @@ else:
 # Select the correct Part Number master
 if mdc_type == "Single Rack MDC":
 
-    active_standard_part_numbers = (
-        SINGLE_STANDARD_PART_NUMBERS
-    )
-
-    active_optional_part_numbers = (
-        SINGLE_OPTIONAL_PART_NUMBERS
-    )
+    active_standard_part_numbers = SINGLE_STANDARD_PART_NUMBERS
+    active_optional_part_numbers = SINGLE_OPTIONAL_PART_NUMBERS
 
 else:
 
-    active_standard_part_numbers = (
-        MULTI_STANDARD_PART_NUMBERS
-    )
-
-    active_optional_part_numbers = (
-        MULTI_OPTIONAL_PART_NUMBERS
-    )
+    active_standard_part_numbers = MULTI_STANDARD_PART_NUMBERS
+    active_optional_part_numbers = MULTI_OPTIONAL_PART_NUMBERS
 
 
 # ------------------------------------------------------------
-# ADD EVERY STANDARD COMPONENT
+# ADD ALL STANDARD BOM COMPONENTS
 # ------------------------------------------------------------
 
-for item in standard_bom:
+for bom_item in standard_bom:
 
-    component_name = item["Component"]
+    # Make sure this is a dictionary
+    if not isinstance(bom_item, dict):
+        continue
 
-    # Get Part Number from the appropriate master
+    component_name = bom_item.get(
+        "Component",
+        "XXX"
+    )
+
+    category = bom_item.get(
+        "Category",
+        "Standard"
+    )
+
+    specification = bom_item.get(
+        "Specification",
+        "XXX"
+    )
+
+    quantity = bom_item.get(
+        "Quantity",
+        1
+    )
+
+    # Get standard component Part Number
     part_number = active_standard_part_numbers.get(
         component_name,
         "XXX"
@@ -1304,7 +1316,7 @@ for item in standard_bom:
     bom_rows.append({
 
         "Category":
-            item["Category"],
+            category,
 
         "Part Number":
             part_number,
@@ -1313,10 +1325,10 @@ for item in standard_bom:
             component_name,
 
         "Specification":
-            item["Specification"],
+            specification,
 
         "Quantity":
-            item["Quantity"],
+            quantity,
 
         "Unit Price":
             "",
@@ -1327,20 +1339,65 @@ for item in standard_bom:
     })
 
 
-# ============================================================
-# ADD SELECTED OPTIONAL COMPONENTS TO BOM
-# ============================================================
+# ------------------------------------------------------------
+# ADD SELECTED OPTIONAL COMPONENTS
+# ------------------------------------------------------------
 
-for item in selected_optional_items:
+for optional_item in selected_optional_items:
 
-    component_key = item["component_key"]
+    component_key = optional_item.get(
+        "component_key",
+        optional_item.get("component", "")
+    )
 
-    component_name = item["component"]
+    component_name = optional_item.get(
+        "component",
+        "XXX"
+    )
 
+    quantity = optional_item.get(
+        "quantity",
+        1
+    )
+
+    unit_price = optional_item.get(
+        "unit_price",
+        "XXX"
+    )
+
+    amount = optional_item.get(
+        "amount",
+        None
+    )
+
+    # Get Part Number
     part_number = active_optional_part_numbers.get(
         component_key,
         "XXX"
     )
+
+    # If component_key doesn't match,
+    # also try component name
+    if part_number == "XXX":
+
+        part_number = active_optional_part_numbers.get(
+            component_name,
+            "XXX"
+        )
+
+
+    # Calculate amount again safely
+    if is_numeric_price(unit_price):
+
+        amount = (
+            float(quantity)
+            * float(unit_price)
+        )
+
+    else:
+
+        amount = None
+
 
     bom_rows.append({
 
@@ -1357,21 +1414,15 @@ for item in selected_optional_items:
             "Selected by User",
 
         "Quantity":
-            item["quantity"],
+            quantity,
 
         "Unit Price":
-            format_price(
-                item["unit_price"]
-            ),
+            format_price(unit_price),
 
         "Amount":
             (
-                format_price(
-                    item["amount"]
-                )
-                if is_numeric_price(
-                    item["unit_price"]
-                )
+                format_price(amount)
+                if amount is not None
                 else "XXX"
             )
 
@@ -1405,7 +1456,6 @@ st.dataframe(
     use_container_width=True,
     hide_index=True
 )
-
 # ============================================================
 # STEP 7 — COMMERCIAL SUMMARY
 # ============================================================
