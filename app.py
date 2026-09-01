@@ -782,6 +782,56 @@ st.header("1️⃣ Select MDC Type")
 mdc_type = st.selectbox("MDC Type", ["Single Rack MDC", "Multi Rack MDC"])
 
 
+# ============================================================
+# STEP 2 — CUSTOMER & PROJECT DETAILS
+# ============================================================
+
+st.header("2️⃣ Customer & Project Details")
+st.caption("Customer Name and Customer Place are compulsory fields.")
+
+customer_col1, customer_col2 = st.columns(2)
+
+with customer_col1:
+    customer_name = st.text_input(
+        "Customer Name *",
+        placeholder="Enter customer / company name",
+        key="customer_name"
+    )
+
+with customer_col2:
+    customer_place = st.text_input(
+        "Customer Place *",
+        placeholder="Enter city / location",
+        key="customer_place"
+    )
+
+problem_col, solution_col = st.columns(2)
+
+with problem_col:
+    problem_statement = st.text_area(
+        "Problem / Requirement",
+        placeholder="Describe the customer's requirement or problem...",
+        height=120,
+        key="problem_statement"
+    )
+
+with solution_col:
+    proposed_solution = st.text_area(
+        "Proposed Solution",
+        placeholder="Describe the proposed MDC solution...",
+        height=120,
+        key="proposed_solution"
+    )
+
+customer_details_complete = bool(
+    customer_name.strip() and customer_place.strip()
+)
+
+if not customer_details_complete:
+    st.warning("Please enter Customer Name and Customer Place before proceeding.")
+    st.stop()
+
+
 
 # ============================================================
 # LOAD CORRECT DATA
@@ -807,10 +857,10 @@ else:
 
 
 # ============================================================
-# STEP 2 — CONFIGURATION
+# STEP 3 — CONFIGURATION
 # ============================================================
 
-st.header("2️⃣ Select Configuration")
+st.header("3️⃣ Select Configuration")
 
 selected_config = st.selectbox(
     "Configuration",
@@ -829,29 +879,29 @@ standard_price = standard_prices[selected_config]
 # STANDARD CONFIGURATION PRICE DISPLAY
 # ============================================================
 
-st.subheader("💰 Standard Configuration Price")
+st.subheader("💵 Standard Configuration Cost")
 
 price_col1, price_col2 = st.columns([2, 1])
 
 with price_col1:
 
     st.metric(
-        "Standard Price",
+        "Standard Cost",
         format_price(standard_price)
     )
 
 with price_col2:
 
     st.caption(
-        "Price is maintained only in the Python code."
+        "Configuration costs are maintained only in the Python PRICE MASTER code."
     )
 
 
 # ============================================================
-# STEP 3 — COMPLETE CONFIGURATION SPECIFICATIONS
+# STEP 4 — COMPLETE CONFIGURATION SPECIFICATIONS
 # ============================================================
 
-st.header("3️⃣ Complete Configuration Specifications")
+st.header("4️⃣ Complete Configuration Specifications")
 
 specifications = config_data[selected_config]
 
@@ -876,10 +926,10 @@ st.dataframe(
 
 
 # ============================================================
-# STEP 4 — OPTIONAL COMPONENTS
+# STEP 5 — OPTIONAL COMPONENTS
 # ============================================================
 
-st.header("4️⃣ Optional Components")
+st.header("5️⃣ Optional Components")
 
 st.info(
     """
@@ -926,7 +976,7 @@ for index, component_key in enumerate(optional_components.keys()):
     with col3:
 
         st.write(
-            f"Unit Price: **{format_price(unit_price)}**"
+            f"Unit Cost: **{format_price(unit_price)}**"
         )
 
     with col4:
@@ -991,7 +1041,7 @@ if selected_optional_items:
             "Quantity":
                 item["quantity"],
 
-            "Unit Price":
+            "Unit Cost":
                 format_price(item["unit_price"]),
 
             "Amount":
@@ -1021,200 +1071,215 @@ else:
 
 
 # ============================================================
-# PRICE CALCULATION
+# STEP 6 — COST SUMMARY & COST-TO-PRICE BUILD-UP
 # ============================================================
 
-standard_numeric_price = numeric_price(
-    standard_price
-)
+st.header("6️⃣ Cost Summary & Cost-to-Price Build-up")
 
-if standard_numeric_price is None:
-    standard_numeric_price = 0.0
+# ------------------------------------------------------------
+# COST FIRST: STANDARD + OPTIONAL
+# ------------------------------------------------------------
 
+standard_numeric_price = numeric_price(standard_price)
 
 optional_total = 0.0
-
 has_unknown_optional_price = False
 
-
 for item in selected_optional_items:
-
     if is_numeric_price(item["unit_price"]):
-
         optional_total += item["amount"]
-
     else:
-
         has_unknown_optional_price = True
 
-
-# ============================================================
-# FINAL PRICE
-# ============================================================
-
-if (
-    is_numeric_price(standard_price)
-    and not has_unknown_optional_price
-):
-
-    final_total = (
-        standard_numeric_price
-        + optional_total
-    )
-
-    final_total_display = format_price(
-        final_total
-    )
-
+if is_numeric_price(standard_price) and not has_unknown_optional_price:
+    total_cost = standard_numeric_price + optional_total
 else:
+    total_cost = None
 
-    final_total = None
+# ------------------------------------------------------------
+# COST TABLE
+# ------------------------------------------------------------
 
-    final_total_display = "XXX"
-
-
-# ============================================================
-# PRICE BREAKDOWN
-# ============================================================
-
-st.header("5️⃣ Price Summary")
-
-summary_col1, summary_col2, summary_col3 = st.columns(3)
-
-
-with summary_col1:
-
-    st.metric(
-        "Standard Configuration",
-        format_price(standard_price)
-    )
-
-
-with summary_col2:
-
-    if has_unknown_optional_price:
-
-        st.metric(
-            "Optional Components",
-            "XXX"
-        )
-
-    else:
-
-        st.metric(
-            "Optional Components",
-            f"₹ {optional_total:,.2f}"
-        )
-
-
-with summary_col3:
-
-    st.metric(
-        "FINAL PRICE",
-        final_total_display
-    )
-
-
-# ============================================================
-# PRICE FORMULA
-# ============================================================
-
-st.subheader("🧮 Price Calculation")
-
-
-st.markdown(
-    """
-    **Final Price = Standard Configuration Price
-    + Sum of (Optional Component Quantity × Optional Component Unit Price)**
-    """
-)
-
-
-# ============================================================
-# SHOW CALCULATION DETAILS
-# ============================================================
-
-calculation_rows = []
-
-
-calculation_rows.append({
-
-    "Item":
-        f"{selected_config} - Standard Configuration",
-
-    "Quantity":
-        1,
-
-    "Unit Price":
-        format_price(standard_price),
-
-    "Amount":
-        format_price(standard_price)
-
-})
-
+cost_rows = [
+    {
+        "Cost Item": "Standard Configuration",
+        "Quantity": 1,
+        "Unit Cost": format_price(standard_price),
+        "Total Cost": format_price(standard_price)
+    }
+]
 
 for item in selected_optional_items:
-
-    calculation_rows.append({
-
-        "Item":
-            item["component"],
-
-        "Quantity":
-            item["quantity"],
-
-        "Unit Price":
-            format_price(item["unit_price"]),
-
-        "Amount":
+    cost_rows.append({
+        "Cost Item": item["component"],
+        "Quantity": item["quantity"],
+        "Unit Cost": format_price(item["unit_price"]),
+        "Total Cost": (
             format_price(item["amount"])
-            if item["amount"] is not None
-            else "XXX"
-
+            if item["amount"] is not None else "XXX"
+        )
     })
 
+cost_df = pd.DataFrame(cost_rows)
+st.subheader("💵 Cost Summary — Before Pricing Factors")
+st.dataframe(cost_df, use_container_width=True, hide_index=True)
 
-if calculation_rows:
+if total_cost is not None:
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.metric("Standard Configuration Cost", format_price(standard_price))
+    with c2:
+        st.metric("Optional Components Cost", f"₹ {optional_total:,.2f}")
+    with c3:
+        st.metric("TOTAL COST", f"₹ {total_cost:,.2f}")
+else:
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.metric("Standard Configuration Cost", format_price(standard_price))
+    with c2:
+        st.metric("Optional Components Cost", "XXX")
+    with c3:
+        st.metric("TOTAL COST", "XXX")
 
-    calculation_df = pd.DataFrame(
-        calculation_rows
-    )
+# ------------------------------------------------------------
+# EDITABLE COST-TO-PRICE FACTORS
+# ------------------------------------------------------------
 
-    st.dataframe(
-        calculation_df,
-        use_container_width=True,
-        hide_index=True
-    )
+st.subheader("📈 Cost → Price Conversion")
+st.info(
+    "Enter the pricing factor name and percentage in the UI. "
+    "Each percentage is applied to the original total cost and the "
+    "resulting additions are accumulated to produce the selling price."
+)
 
+# Pricing factors are applied sequentially to the running cumulative amount.
+# Example: 1000 + 15% = 1150; 1150 + 20% = 1380; etc.
+# This keeps Previous Amount → Added Amount → Cumulative Price mathematically consistent.
+# All factor names and percentages are editable in the UI.
 
-# ============================================================
-# PRICE WARNING
-# ============================================================
+DEFAULT_PRICING_FACTORS = [
+    ("Factory Cost (COGS)", 0.0),
+    ("Admin & R&D Overhead", 15.0),
+    ("Marketing & Sales", 20.0),
+    ("Manufacturer Profit", 15.0),
+    ("Distribution & Retail", 45.0),
+]
+
+pricing_factor_rows = []
+
+for factor_index, (default_name, default_percentage) in enumerate(DEFAULT_PRICING_FACTORS, start=1):
+
+    factor_col1, factor_col2 = st.columns([3, 1])
+
+    with factor_col1:
+        factor_name = st.text_input(
+            f"Layer {factor_index} — Name *",
+            value=default_name,
+            key=f"pricing_factor_name_{factor_index}"
+        )
+
+    with factor_col2:
+        factor_percentage = st.number_input(
+            f"Percentage *",
+            min_value=0.0,
+            max_value=1000.0,
+            value=default_percentage,
+            step=0.5,
+            format="%.2f",
+            key=f"pricing_factor_percentage_{factor_index}"
+        )
+
+    pricing_factor_rows.append({
+        "Layer": factor_index,
+        "Name": factor_name.strip(),
+        "Percentage": float(factor_percentage)
+    })
+
+pricing_inputs_complete = all(
+    row["Name"] and row["Percentage"] >= 0
+    for row in pricing_factor_rows
+)
+
+if not pricing_inputs_complete:
+    st.error("Every pricing layer must have a Name and Percentage.")
+    st.stop()
+
+# ------------------------------------------------------------
+# CALCULATE COST → PRICE TABLE
+# ------------------------------------------------------------
+
+pricing_build_up_rows = []
+
+running_amount = total_cost
+
+for row in pricing_factor_rows:
+
+    layer = row["Layer"]
+    name = row["Name"]
+    percentage = row["Percentage"]
+
+    if layer == 1:
+        previous_amount_display = format_price(total_cost) if total_cost is not None else "XXX"
+        added_amount_display = "—"
+        cumulative_display = format_price(total_cost) if total_cost is not None else "XXX"
+
+        if total_cost is not None:
+            running_amount = total_cost
+
+    else:
+        previous_amount = running_amount
+
+        if running_amount is not None:
+            added_amount = running_amount * (percentage / 100.0)
+            running_amount = running_amount + added_amount
+            previous_amount_display = format_price(previous_amount)
+            added_amount_display = f"+{percentage:.2f}% = {format_price(added_amount)}"
+            cumulative_display = format_price(running_amount)
+        else:
+            previous_amount_display = "XXX"
+            added_amount_display = f"+{percentage:.2f}% = XXX"
+            cumulative_display = "XXX"
+
+    pricing_build_up_rows.append({
+        "Layer": layer,
+        "Name": name,
+        "Percentage Added": "Baseline" if layer == 1 else f"{percentage:.2f}%",
+        "Previous Amount": previous_amount_display,
+        "Added Amount": added_amount_display,
+        "Cumulative Price": cumulative_display
+    })
+
+pricing_build_up_df = pd.DataFrame(pricing_build_up_rows)
+
+st.dataframe(
+    pricing_build_up_df,
+    use_container_width=True,
+    hide_index=True
+)
+
+# Final selling price is the last cumulative amount.
+if total_cost is not None and pricing_inputs_complete:
+    selling_price = running_amount
+    selling_price_display = format_price(selling_price)
+else:
+    selling_price = None
+    selling_price_display = "XXX"
+
+st.subheader("🏷️ Final Selling Price")
+st.success(f"### {selling_price_display}")
+
+# ------------------------------------------------------------
+# WARNINGS
+# ------------------------------------------------------------
+
+if not customer_details_complete:
+    st.warning("Customer Name and Customer Place are compulsory.")
 
 if not is_numeric_price(standard_price):
-
-    st.warning(
-        """
-        ⚠️ The standard configuration price is still XXX.
-
-        Enter the actual standard price in the PRICE MASTER section
-        at the top of this Python file.
-        """
-    )
-
+    st.warning("Standard configuration cost is XXX. Enter the actual cost in the Python PRICE MASTER.")
 
 if has_unknown_optional_price:
-
-    st.warning(
-        """
-        ⚠️ One or more selected optional components still have
-        XXX as their price.
-
-        Enter their actual prices in the PRICE MASTER section
-        at the top of this Python file.
-        """
-    )
+    st.warning("One or more selected optional component costs are XXX. Enter their actual costs in the Python PRICE MASTER.")
 
 
 # ============================================================
@@ -1428,15 +1493,11 @@ st.dataframe(
 )
 
 
-# STEP 7 — COMMERCIAL SUMMARY
+# ============================================================
+# STEP 8 — FINAL BOM & COMMERCIAL SUMMARY
 # ============================================================
 
-
-# ============================================================
-# STEP 7 — COMMERCIAL SUMMARY
-# ============================================================
-
-st.header("7️⃣ Commercial Pricing Summary")
+st.header("8️⃣ Final BOM & Commercial Summary")
 
 
 commercial_rows = [
@@ -1477,7 +1538,7 @@ for item in selected_optional_items:
         "Quantity":
             item["quantity"],
 
-        "Unit Price":
+        "Unit Cost":
             format_price(item["unit_price"]),
 
         "Amount":
@@ -1501,55 +1562,47 @@ st.dataframe(
 
 
 # ============================================================
-# TOTALS
+# COST / PRICE SUMMARY
 # ============================================================
 
-st.subheader("💰 Total Commercial Value")
+st.subheader("💰 Cost & Price Summary")
 
+summary_rows_ui = [
+    {"Metric": "Customer Name", "Value": customer_name or "—"},
+    {"Metric": "Customer Place", "Value": customer_place or "—"},
+    {"Metric": "Problem / Requirement", "Value": problem_statement or "—"},
+    {"Metric": "Proposed Solution", "Value": proposed_solution or "—"},
+    {"Metric": "Standard Configuration Cost", "Value": format_price(standard_price)},
+    {"Metric": "Optional Components Cost", "Value": (f"₹ {optional_total:,.2f}" if not has_unknown_optional_price else "XXX")},
+    {"Metric": "TOTAL COST", "Value": (format_price(total_cost) if total_cost is not None else "XXX")},
+    {"Metric": "FINAL SELLING PRICE", "Value": selling_price_display},
+]
 
-total_col1, total_col2 = st.columns(2)
+st.dataframe(
+    pd.DataFrame(summary_rows_ui),
+    use_container_width=True,
+    hide_index=True
+)
 
+# ============================================================
+# STEP 9 — EXCEL EXPORT
+# ============================================================
 
-with total_col1:
-
-    st.write(
-        "**Standard Configuration:**"
-    )
-
-    st.write(
-        format_price(standard_price)
-    )
-
-    st.write(
-        "**Optional Components:**"
-    )
-
-    if has_unknown_optional_price:
-
-        st.write("XXX")
-
-    else:
-
-        st.write(
-            f"₹ {optional_total:,.2f}"
-        )
-
-
-with total_col2:
-
-    st.success(
-        f"### FINAL PRICE: {final_total_display}"
-    )
-
-
-
+st.header("9️⃣ Excel Export")
 
 
 # ============================================================
-# STEP 8 — EXCEL EXPORT
+# CUSTOMER / PROJECT DETAILS FOR EXCEL
 # ============================================================
 
-st.header("8️⃣ Export")
+customer_details_df = pd.DataFrame([
+    {"Field": "Customer Name", "Value": customer_name},
+    {"Field": "Customer Place", "Value": customer_place},
+    {"Field": "MDC Type", "Value": mdc_type},
+    {"Field": "Selected Configuration", "Value": selected_config},
+    {"Field": "Problem / Requirement", "Value": problem_statement},
+    {"Field": "Proposed Solution", "Value": proposed_solution},
+])
 
 
 # ============================================================
@@ -1593,7 +1646,7 @@ if selected_optional_items:
             "Quantity":
                 item["quantity"],
 
-            "Unit Price":
+            "Unit Cost":
                 format_price(item["unit_price"]),
 
             "Amount":
@@ -1613,70 +1666,63 @@ else:
             "Part Number",
             "Component",
             "Quantity",
-            "Unit Price",
+            "Unit Cost",
             "Amount"
         ]
     )
 
 
 # ============================================================
-# PRICE SUMMARY
+# PRICE SUMMARY + COST-TO-PRICE BUILD-UP
 # ============================================================
 
-price_summary_df = pd.DataFrame([
+price_summary_rows = [
+    {"Section": "Customer", "Item": "Customer Name", "Value": customer_name},
+    {"Section": "Customer", "Item": "Customer Place", "Value": customer_place},
+    {"Section": "Project", "Item": "Problem / Requirement", "Value": problem_statement},
+    {"Section": "Project", "Item": "Proposed Solution", "Value": proposed_solution},
+    {"Section": "Configuration", "Item": "MDC Type", "Value": mdc_type},
+    {"Section": "Configuration", "Item": "Selected Configuration", "Value": selected_config},
+    {"Section": "Cost", "Item": "Standard Configuration Cost", "Value": format_price(standard_price)},
+    {"Section": "Cost", "Item": "Optional Components Cost", "Value": (f"₹ {optional_total:,.2f}" if not has_unknown_optional_price else "XXX")},
+    {"Section": "Cost", "Item": "TOTAL COST", "Value": (format_price(total_cost) if total_cost is not None else "XXX")},
+]
 
-    {
-        "Description":
-            "MDC Type",
+for row in pricing_build_up_rows:
+    price_summary_rows.append({
+        "Section": "Cost → Price",
+        "Item": f"Layer {row['Layer']} — {row['Name']}",
+        "Value": (
+            f"{row['Percentage Added']} | Previous: {row['Previous Amount']} | "
+            f"Added: {row['Added Amount']} | Cumulative: {row['Cumulative Price']}"
+        )
+    })
 
-        "Value":
-            mdc_type
-    },
+price_summary_rows.append({
+    "Section": "Price",
+    "Item": "FINAL SELLING PRICE",
+    "Value": selling_price_display
+})
 
-    {
-        "Description":
-            "Selected Configuration",
+price_summary_df = pd.DataFrame(price_summary_rows)
 
-        "Value":
-            selected_config
-    },
-
-    {
-        "Description":
-            "Standard Configuration Price",
-
-        "Value":
-            format_price(standard_price)
-    },
-
-    {
-        "Description":
-            "Optional Components Total",
-
-        "Value":
-            (
-                f"₹ {optional_total:,.2f}"
-                if not has_unknown_optional_price
-                else "XXX"
-            )
-    },
-
-    {
-        "Description":
-            "FINAL PRICE",
-
-        "Value":
-            final_total_display
-    }
-
-])
-
+# Separate editable-factor table for the Excel workbook.
+pricing_factors_export_df = pd.DataFrame(pricing_factor_rows)
+pricing_factors_export_df["Percentage Added"] = pricing_factors_export_df["Percentage"].map(
+    lambda x: "Baseline" if x == 0 else f"{x:.2f}%"
+)
+pricing_factors_export_df = pricing_factors_export_df[
+    ["Layer", "Name", "Percentage Added"]
+]
 
 # ============================================================
 # CREATE BOM WITHOUT PRICE EXCEL
 # ============================================================
 
 excel_bom_without_price = create_excel_file({
+    "Customer Details":
+        customer_details_df,
+
     "BOM":
         bom_without_price_df
 })
@@ -1688,11 +1734,23 @@ excel_bom_without_price = create_excel_file({
 
 excel_bom_with_price = create_excel_file({
 
+    "Customer Details":
+        customer_details_df,
+
     "BOM With Price":
         bom_with_price_df,
 
     "Optional Prices":
         export_optional_df,
+
+    "Cost Summary":
+        cost_df,
+
+    "Price Build-up":
+        pricing_build_up_df,
+
+    "Pricing Factors":
+        pricing_factors_export_df,
 
     "Price Summary":
         price_summary_df
@@ -1757,5 +1815,5 @@ st.divider()
 
 st.caption(
     "MDC Configuration & BOM Generator | "
-    "Prices and part numbers are maintained in Python code only."
+    "Configuration costs and part numbers are maintained in Python code; pricing factors are editable in the UI."
 )
