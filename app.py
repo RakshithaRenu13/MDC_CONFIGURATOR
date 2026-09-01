@@ -779,14 +779,8 @@ st.markdown(
 
 st.header("1️⃣ Select MDC Type")
 
-mdc_type = st.radio(
-    "MDC Type",
-    [
-        "Single Rack MDC",
-        "Multi Rack MDC"
-    ],
-    horizontal=True
-)
+mdc_type = st.selectbox("MDC Type", ["Single Rack MDC", "Multi Rack MDC"])
+
 
 
 # ============================================================
