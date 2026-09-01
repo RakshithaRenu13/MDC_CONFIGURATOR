@@ -969,7 +969,7 @@ mdc_type = st.selectbox("MDC Type", ["Single Rack MDC", "Multi Rack MDC"])
 # ============================================================
 
 st.header("2️⃣ Customer & Project Details")
-st.caption("Customer Name and Customer Place are compulsory fields.")
+#st.caption("Customer Name and Customer Place are compulsory fields.")
 
 customer_col1, customer_col2 = st.columns(2)
 
