@@ -1512,7 +1512,12 @@ for parameter, value in specifications.items():
             parameter,
 
         selected_config:
-            value
+            value,
+        "Part Number":
+                optional_part_numbers.get(
+                    item["component_key"],
+                    "XXX"
+                ),
 
     })
 
