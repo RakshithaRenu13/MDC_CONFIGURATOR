@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import requests
 from io import BytesIO
 
 
@@ -13,7 +14,79 @@ st.set_page_config(
     layout="wide"
 )
 
+# ============================================================
+# CURRENCY SELECTION
+# ============================================================
 
+st.header("💱 Currency Settings")
+
+col1, col2 = st.columns([2, 2])
+
+with col1:
+
+    selected_currency = st.radio(
+        "Display Currency",
+        ["INR", "USD"],
+        horizontal=True
+    )
+
+with col2:
+
+    st.write("")
+    st.write("")
+
+
+# ------------------------------------------------------------
+# GET LIVE RATE
+# ------------------------------------------------------------
+
+if selected_currency == "INR":
+
+    exchange_rate = 1.0
+    base_currency = "INR"
+    target_currency = "INR"
+
+else:
+
+    base_currency = "INR"
+    target_currency = "USD"
+
+    exchange_rate = get_live_exchange_rate(
+        base_currency,
+        target_currency
+    )
+
+
+if exchange_rate is None:
+
+    st.error(
+        "Unable to fetch live exchange rate. "
+        "Please check your internet connection."
+    )
+
+    exchange_rate = 1.0
+
+    st.stop()
+
+
+# ------------------------------------------------------------
+# DISPLAY RATE
+# ------------------------------------------------------------
+
+if selected_currency == "USD":
+
+    st.success(
+        f"Live Exchange Rate: "
+        f"₹1 = ${exchange_rate:.4f}"
+    )
+
+else:
+
+    st.info(
+        "Displaying all values in Indian Rupees (INR)"
+    )
+
+st.divider()
 # ============================================================
 # PRICE MASTER — EDIT ONLY IN CODE
 #
@@ -717,14 +790,25 @@ def numeric_price(price):
     return float(str(price).strip().replace(",", ""))
 
 
-def format_price(price):
-    """Display a price. XXX stays XXX."""
-    value = numeric_price(price)
+# ============================================================
+# FORMAT PRICE WITH SELECTED CURRENCY
+# ============================================================
 
-    if value is None:
+def format_price(price):
+
+    if not is_numeric_price(price):
         return "XXX"
 
-    return f"₹ {value:,.2f}"
+    converted_price = convert_currency(
+        float(price),
+        exchange_rate
+    )
+
+    symbol = currency_symbol(
+        selected_currency
+    )
+
+    return f"{symbol} {converted_price:,.2f}"
 
 
 def calculate_optional_amount(price, quantity):
@@ -752,7 +836,52 @@ def create_excel_file(dataframes):
     output.seek(0)
     return output
 
+# ============================================================
+# LIVE CURRENCY CONVERSION
+# ============================================================
 
+@st.cache_data(ttl=3600)
+def get_live_exchange_rate(from_currency, to_currency):
+
+    if from_currency == to_currency:
+        return 1.0
+
+    try:
+
+        url = (
+            f"https://api.frankfurter.dev/v2/rate/"
+            f"{from_currency}/{to_currency}"
+        )
+
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+
+        data = response.json()
+
+        return float(data["rate"])
+
+    except Exception:
+
+        return None
+
+
+def convert_currency(amount, rate):
+
+    if amount is None:
+        return None
+
+    return float(amount) * float(rate)
+
+
+def currency_symbol(currency):
+
+    if currency == "INR":
+        return "₹"
+
+    elif currency == "USD":
+        return "$"
+
+    return ""
 # ============================================================
 # HEADER
 # ============================================================
