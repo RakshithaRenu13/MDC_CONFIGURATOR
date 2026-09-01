@@ -779,7 +779,7 @@ st.markdown(
 
 st.header("1️⃣ Select MDC Type")
 
-mdc_type = st.selectbox("MDC Type", ["Single Rack MDC", "Multi Rack MDC"])
+mdc_type = st.selectbox("MDC Type", ["Singly Rack MDC", "Multi Rack MDC"])
 
 
 
