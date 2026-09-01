@@ -1009,9 +1009,9 @@ customer_details_complete = bool(
     customer_name.strip() and customer_place.strip()
 )
 
-if not customer_details_complete:
-    st.warning("Please enter Customer Name and Customer Place before proceeding.")
-    st.stop()
+# if not customer_details_complete:
+#     st.warning("Please enter Customer Name and Customer Place before proceeding.")
+#     st.stop()
 
 
 
