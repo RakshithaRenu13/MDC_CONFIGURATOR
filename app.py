@@ -114,7 +114,7 @@ MULTI_OPTIONAL_PART_NUMBERS = {
 
 SINGLE_RACK_PRICES = {
 
-    "Config 1": 2,
+    "Config 1": 20000,
     "Config 2": 30000,
     "Config 3": 27000,
     "Config 4": 32000
