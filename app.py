@@ -1265,50 +1265,39 @@ else:
 # ADD STANDARD COMPONENTS TO BOM
 # ============================================================
 
-# Select the correct Part Number master
-if mdc_type == "Single Rack MDC":
+# The standard_bom list contains tuples:
+# (component_name, specification_key, quantity)
+# Build the BOM from the selected configuration.
 
-    active_standard_part_numbers = SINGLE_STANDARD_PART_NUMBERS
-    active_optional_part_numbers = SINGLE_OPTIONAL_PART_NUMBERS
+for component_name, specification_key, bom_quantity in standard_bom:
 
-else:
-
-    active_standard_part_numbers = MULTI_STANDARD_PART_NUMBERS
-    active_optional_part_numbers = MULTI_OPTIONAL_PART_NUMBERS
-
-
-# ------------------------------------------------------------
-# ADD ALL STANDARD BOM COMPONENTS
-# ------------------------------------------------------------
-
-for bom_item in standard_bom:
-
-    # Make sure this is a dictionary
-    if not isinstance(bom_item, dict):
-        continue
-
-    component_name = bom_item.get(
-        "Component",
+    # Get the actual specification/value from the selected configuration.
+    specification = specifications.get(
+        specification_key,
         "XXX"
     )
 
-    category = bom_item.get(
-        "Category",
-        "Standard"
-    )
+    # For multi-rack configurations, rack quantities are stored in the
+    # selected configuration itself. For the other components the quantity
+    # is normally 1.
+    if bom_quantity is None:
 
-    specification = bom_item.get(
-        "Specification",
-        "XXX"
-    )
+        raw_quantity = specifications.get(
+            specification_key,
+            1
+        )
 
-    quantity = bom_item.get(
-        "Quantity",
-        1
-    )
+        # Rack quantities are normally stored as strings such as "1", "2".
+        try:
+            quantity = int(float(str(raw_quantity).strip()))
+        except (ValueError, TypeError):
+            quantity = 1
 
-    # Get standard component Part Number
-    part_number = active_standard_part_numbers.get(
+    else:
+        quantity = bom_quantity
+
+    # Get the standard component Part Number from the code-only master.
+    part_number = standard_part_numbers.get(
         component_name,
         "XXX"
     )
@@ -1316,7 +1305,7 @@ for bom_item in standard_bom:
     bom_rows.append({
 
         "Category":
-            category,
+            "Standard",
 
         "Part Number":
             part_number,
@@ -1339,9 +1328,9 @@ for bom_item in standard_bom:
     })
 
 
-# ------------------------------------------------------------
-# ADD SELECTED OPTIONAL COMPONENTS
-# ------------------------------------------------------------
+# ============================================================
+# ADD SELECTED OPTIONAL COMPONENTS TO BOM
+# ============================================================
 
 for optional_item in selected_optional_items:
 
@@ -1365,39 +1354,20 @@ for optional_item in selected_optional_items:
         "XXX"
     )
 
-    amount = optional_item.get(
-        "amount",
-        None
-    )
+    # Use the already-calculated amount when available.
+    # If a numeric price is present, calculate Quantity × Unit Price.
+    if is_numeric_price(unit_price):
+        amount = calculate_optional_amount(
+            unit_price,
+            quantity
+        )
+    else:
+        amount = None
 
-    # Get Part Number
-    part_number = active_optional_part_numbers.get(
+    part_number = optional_part_numbers.get(
         component_key,
         "XXX"
     )
-
-    # If component_key doesn't match,
-    # also try component name
-    if part_number == "XXX":
-
-        part_number = active_optional_part_numbers.get(
-            component_name,
-            "XXX"
-        )
-
-
-    # Calculate amount again safely
-    if is_numeric_price(unit_price):
-
-        amount = (
-            float(quantity)
-            * float(unit_price)
-        )
-
-    else:
-
-        amount = None
-
 
     bom_rows.append({
 
@@ -1456,7 +1426,8 @@ st.dataframe(
     use_container_width=True,
     hide_index=True
 )
-# ============================================================
+
+
 # STEP 7 — COMMERCIAL SUMMARY
 # ============================================================
 
@@ -1581,37 +1552,34 @@ with total_col2:
 st.header("8️⃣ Export")
 
 
-# Specifications DataFrame
-export_spec_rows = []
+# ============================================================
+# EXCEL FILE 1 — BOM WITHOUT PRICE
+# ============================================================
 
-for parameter, value in specifications.items():
-
-    export_spec_rows.append({
-
-        "Parameter":
-            parameter,
-
-        selected_config:
-            value,
-        "Part Number":
-                optional_part_numbers.get(
-                    item["component_key"],
-                    "XXX"
-                ),
-
-    })
+# Only BOM information. No Unit Price or Amount columns.
+bom_without_price_df = bom_df[[
+    "Category",
+    "Part Number",
+    "Component",
+    "Specification",
+    "Quantity"
+]].copy()
 
 
-export_spec_df = pd.DataFrame(
-    export_spec_rows
-)
+# ============================================================
+# EXCEL FILE 2 — BOM WITH PRICE
+# ============================================================
+
+# This contains the complete BOM plus pricing information and a
+# separate Price Summary sheet. Standard configuration price is
+# added to the selected optional component totals.
+bom_with_price_df = bom_df.copy()
 
 
-# Optional components DataFrame
+# Optional price details
 if selected_optional_items:
 
     export_optional_df = pd.DataFrame([
-
         {
             "Part Number":
                 optional_part_numbers.get(
@@ -1629,11 +1597,12 @@ if selected_optional_items:
                 format_price(item["unit_price"]),
 
             "Amount":
-                format_price(item["amount"])
-                if item["amount"] is not None
-                else "XXX"
+                (
+                    format_price(item["amount"])
+                    if item["amount"] is not None
+                    else "XXX"
+                )
         }
-
         for item in selected_optional_items
     ])
 
@@ -1650,25 +1619,41 @@ else:
     )
 
 
-# Price summary DataFrame
+# ============================================================
+# PRICE SUMMARY
+# ============================================================
 
-
-# Price summary DataFrame
 price_summary_df = pd.DataFrame([
 
     {
         "Description":
-            "Standard Configuration",
+            "MDC Type",
 
-        "Price":
+        "Value":
+            mdc_type
+    },
+
+    {
+        "Description":
+            "Selected Configuration",
+
+        "Value":
+            selected_config
+    },
+
+    {
+        "Description":
+            "Standard Configuration Price",
+
+        "Value":
             format_price(standard_price)
     },
 
     {
         "Description":
-            "Optional Components",
+            "Optional Components Total",
 
-        "Price":
+        "Value":
             (
                 f"₹ {optional_total:,.2f}"
                 if not has_unknown_optional_price
@@ -1680,24 +1665,34 @@ price_summary_df = pd.DataFrame([
         "Description":
             "FINAL PRICE",
 
-        "Price":
+        "Value":
             final_total_display
     }
 
 ])
 
 
-# Create Excel
-excel_file = create_excel_file({
+# ============================================================
+# CREATE BOM WITHOUT PRICE EXCEL
+# ============================================================
 
-    "Configuration":
-        export_spec_df,
-
-    "Optional Components":
-        export_optional_df,
-
+excel_bom_without_price = create_excel_file({
     "BOM":
-        bom_df,
+        bom_without_price_df
+})
+
+
+# ============================================================
+# CREATE BOM WITH PRICE EXCEL
+# ============================================================
+
+excel_bom_with_price = create_excel_file({
+
+    "BOM With Price":
+        bom_with_price_df,
+
+    "Optional Prices":
+        export_optional_df,
 
     "Price Summary":
         price_summary_df
@@ -1705,26 +1700,56 @@ excel_file = create_excel_file({
 })
 
 
+# ============================================================
+# DOWNLOAD — BOM WITHOUT PRICE
+# ============================================================
+
 st.download_button(
 
-    label="📥 Download Complete BOM & Pricing Excel",
+    label="📥 Download BOM — Without Price",
 
-    data=excel_file,
+    data=excel_bom_without_price,
 
     file_name=(
         f"{mdc_type.replace(' ', '_')}_"
-        f"{selected_config.replace(' ', '_')}_BOM.xlsx"
+        f"{selected_config.replace(' ', '_')}_"
+        f"BOM_Without_Price.xlsx"
     ),
 
     mime=(
         "application/vnd.openxmlformats-officedocument."
         "spreadsheetml.sheet"
-    )
+    ),
 
+    key="download_bom_without_price"
 )
 
 
 # ============================================================
+# DOWNLOAD — BOM WITH PRICE
+# ============================================================
+
+st.download_button(
+
+    label="📥 Download BOM — With Price",
+
+    data=excel_bom_with_price,
+
+    file_name=(
+        f"{mdc_type.replace(' ', '_')}_"
+        f"{selected_config.replace(' ', '_')}_"
+        f"BOM_With_Price.xlsx"
+    ),
+
+    mime=(
+        "application/vnd.openxmlformats-officedocument."
+        "spreadsheetml.sheet"
+    ),
+
+    key="download_bom_with_price"
+)
+
+
 # FOOTER
 # ============================================================
 
